@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "jieba_quick"
+name = "jieba_fast"
 version = "1.0.0"
 description = "Tokenize Chinese characters"
 license = "MIT"
