@@ -5,6 +5,7 @@ A Chinese text segmentation module, from `jieba_fast`, with wheels for python3.9
 ## Installation
 
 You can install the latest stable version via:
+
 `$ pip install jieba_pyfast`
 
 ## Main Functions
