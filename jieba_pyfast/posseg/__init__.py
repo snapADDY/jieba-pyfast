@@ -1,11 +1,8 @@
-from __future__ import absolute_import, unicode_literals
-
-import os
 import pickle
 import re
 import sys
 
-import jieba_fast
+import jieba_pyfast
 
 from .._compat import *
 from .viterbi import viterbi
@@ -80,7 +77,7 @@ class pair(object):
 
 class POSTokenizer(object):
     def __init__(self, tokenizer=None):
-        self.tokenizer = tokenizer or jieba_fast.Tokenizer()
+        self.tokenizer = tokenizer or jieba_pyfast.Tokenizer()
         self.load_word_tag(self.tokenizer.get_dict_file())
 
     def __repr__(self):
@@ -258,7 +255,7 @@ class POSTokenizer(object):
 
 # default Tokenizer instance
 
-dt = POSTokenizer(jieba_fast.dt)
+dt = POSTokenizer(jieba_pyfast.dt)
 
 # global functions
 
@@ -281,15 +278,15 @@ def cut(sentence, HMM=True):
     instances are not supported.
     """
     global dt
-    if jieba_fast.pool is None:
+    if jieba_pyfast.pool is None:
         for w in dt.cut(sentence, HMM=HMM):
             yield w
     else:
         parts = strdecode(sentence).splitlines(True)
         if HMM:
-            result = jieba_fast.pool.map(_lcut_internal, parts)
+            result = jieba_pyfast.pool.map(_lcut_internal, parts)
         else:
-            result = jieba_fast.pool.map(_lcut_internal_no_hmm, parts)
+            result = jieba_pyfast.pool.map(_lcut_internal_no_hmm, parts)
         for r in result:
             for w in r:
                 yield w

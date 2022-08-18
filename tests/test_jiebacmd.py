@@ -10,7 +10,7 @@ from __future__ import unicode_literals
 import sys
 sys.path.append("../")
 
-import jieba
+import jieba_pyfast as jieba
 
 default_encoding='utf-8'
 

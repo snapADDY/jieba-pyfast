@@ -1,12 +1,14 @@
 #encoding=utf-8
+from __future__ import print_function
 import sys
 sys.path.append("../")
-import jieba
-
+import jieba_pyfast.posseg as pseg
 
 def cuttest(test_sent):
-    result = jieba.cut(test_sent,HMM=False)
-    print(" / ".join(result))
+    result = pseg.cut(test_sent, HMM=False)
+    for word, flag in result:
+        print(word, "/", flag, ", ", end=' ')
+    print("")
 
 
 if __name__ == "__main__":
@@ -95,6 +97,3 @@ if __name__ == "__main__":
     cuttest('C++和c#是什么关系？11+122=133，是吗？PI=3.14159')
     cuttest('你认识那个和主席握手的的哥吗？他开一辆黑色的士。')
     cuttest('枪杆子中出政权')
-    cuttest('张三风同学走上了不归路')
-    cuttest('阿Q腰间挂着BB机手里拿着大哥大，说：我一般吃饭不AA制的。')
-    cuttest('在1号店能买到小S和大S八卦的书，还有3D电视。')

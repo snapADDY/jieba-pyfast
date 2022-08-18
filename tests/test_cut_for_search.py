@@ -2,12 +2,12 @@
 from __future__ import print_function
 import sys
 sys.path.append("../")
-import jieba.posseg as pseg
+import jieba_pyfast as jieba
 
 def cuttest(test_sent):
-    result = pseg.cut(test_sent, HMM=False)
-    for word, flag in result:
-        print(word, "/", flag, ", ", end=' ')
+    result = jieba.cut_for_search(test_sent)
+    for word in result:
+        print(word, "/", end=' ') 
     print("")
 
 
@@ -96,4 +96,3 @@ if __name__ == "__main__":
     cuttest('AT&T是一件不错的公司，给你发offer了吗？')
     cuttest('C++和c#是什么关系？11+122=133，是吗？PI=3.14159')
     cuttest('你认识那个和主席握手的的哥吗？他开一辆黑色的士。')
-    cuttest('枪杆子中出政权')

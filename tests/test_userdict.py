@@ -2,9 +2,8 @@
 from __future__ import print_function, unicode_literals
 import sys
 sys.path.append("../")
-import jieba
-jieba.load_userdict("userdict.txt")
-import jieba.posseg as pseg
+import jieba_pyfast as jieba
+import jieba_pyfast.posseg as pseg
 
 jieba.add_word('石墨烯')
 jieba.add_word('凱特琳')

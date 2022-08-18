@@ -4,7 +4,7 @@ import sys
 sys.path.append("../")
 import unittest
 import types
-import jieba
+import jieba_pyfast as jieba
 if sys.version_info[0] > 2:
     from imp import reload
 
@@ -124,16 +124,6 @@ class JiebaTestCase(unittest.TestCase):
             print(" , ".join(result), file=sys.stderr)
         print("testCutAll", file=sys.stderr)
 
-    def testSetDictionary(self):
-        jieba.set_dictionary("foobar.txt")
-        for content in test_contents:
-            result = jieba.cut(content)
-            assert isinstance(result, types.GeneratorType), "Test SetDictionary Generator error"
-            result = list(result)
-            assert isinstance(result, list), "Test SetDictionary error on content: %s" % content
-            print(" , ".join(result), file=sys.stderr)
-        print("testSetDictionary", file=sys.stderr)
-
     def testCutForSearch(self):
         for content in test_contents:
             result = jieba.cut_for_search(content)
@@ -144,7 +134,7 @@ class JiebaTestCase(unittest.TestCase):
         print("testCutForSearch", file=sys.stderr)
 
     def testPosseg(self):
-        import jieba.posseg as pseg
+        import jieba_pyfast.posseg as pseg
         for content in test_contents:
             result = pseg.cut(content)
             assert isinstance(result, types.GeneratorType), "Test Posseg Generator error"
@@ -173,7 +163,7 @@ class JiebaTestCase(unittest.TestCase):
         print("testDefaultCut_NOHMM", file=sys.stderr)
 
     def testPosseg_NOHMM(self):
-        import jieba.posseg as pseg
+        import jieba_pyfast.posseg as pseg
         for content in test_contents:
             result = pseg.cut(content,HMM=False)
             assert isinstance(result, types.GeneratorType), "Test Posseg Generator error"

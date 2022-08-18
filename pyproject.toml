@@ -15,12 +15,23 @@ isort = "^5.9.2"
 black = "^22.6.0"
 auditwheel = "^5.1.2"
 pycln = "^2.1.1"
+pytest = "^7.1.2"
+cibuildwheel = "^2.9.0"
 
 [tool.isort]
 line_length = 88
 use_parentheses = true
 include_trailing_comma = true
 multi_line_output = 3
+
+[tool.pycln]
+all = true
+exclude = "__init__.py"
+
+[tool.cibuildwheel]
+build = "cp310-*"
+test-requires = "pytest"
+test-command = "pytest {project}/tests"
 
 [build-system]
 requires = ["poetry-core", "setuptools"]

@@ -2,14 +2,13 @@
 from __future__ import print_function
 import sys
 sys.path.append("../../")
-import jieba
+import jieba_pyfast as jieba
 jieba.enable_parallel(4)
-import jieba.posseg as pseg
 
 def cuttest(test_sent):
-    result = pseg.cut(test_sent)
-    for w in result:
-        print(w.word, "/", w.flag, ", ", end=' ')  
+    result = jieba.cut(test_sent)
+    for word in result:
+        print(word, "/", end=' ') 
     print("")
 
 

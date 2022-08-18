@@ -2,7 +2,7 @@
 from __future__ import print_function,unicode_literals
 import sys
 sys.path.append("../")
-import jieba
+import jieba_pyfast as jieba
 
 g_mode="default"
 
