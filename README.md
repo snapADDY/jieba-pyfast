@@ -1,6 +1,6 @@
 # jieba_pyfast
 
-A Chinese text segmentation module, from `jieba_pyfast`, with wheels for python3.9 & python3.10
+A Chinese text segmentation module, from `jieba_fast`, with wheels for python3.9 & python3.10
 
 ## Installation
 
