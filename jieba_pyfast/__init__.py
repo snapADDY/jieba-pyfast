@@ -1,12 +1,11 @@
 from __future__ import absolute_import, unicode_literals
 
-__version__ = "0.39"
+__version__ = "1.3.0"
 __license__ = "MIT"
 
 import logging
 import marshal
 import os
-import platform
 import re
 import sys
 import tempfile
