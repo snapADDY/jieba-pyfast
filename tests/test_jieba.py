@@ -5,8 +5,7 @@ sys.path.append("../")
 import unittest
 import types
 import jieba_pyfast as jieba
-if sys.version_info[0] > 2:
-    from imp import reload
+from importlib import reload
 
 jieba.initialize()
 
