@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "jieba_pyfast"
-version = "1.4.1"
+version = "1.4.2"
 description = "Tokenize Chinese characters"
 license = "MIT"
 authors = ["snapADDY GmbH <info@snapaddy.com>"]
@@ -12,7 +12,7 @@ python = "3.11.*"
 
 [tool.poetry.dev-dependencies]
 isort = "^5.9.2"
-black = "^22.6.0"
+black = "^23.3.0"
 auditwheel = "^5.1.2"
 pycln = "^2.1.1"
 pytest = "^7.1.2"
