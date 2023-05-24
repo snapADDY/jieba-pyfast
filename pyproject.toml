@@ -18,7 +18,7 @@ pytest = "^7.1.2"
 cibuildwheel = "^2.9.0"
 
 [tool.poetry.build]
-generate-setup-file = false
+generate-setup-file = true
 script = "build.py"
 
 [tool.isort]
