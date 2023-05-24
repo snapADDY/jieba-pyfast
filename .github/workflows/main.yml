@@ -22,7 +22,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install cibuildwheel
-        run: pip install cibuildwheel poetry --pre
+        run: pip install cibuildwheel poetry
 
       - name: Build wheels
         run: cibuildwheel --output-dir dist
