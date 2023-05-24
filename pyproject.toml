@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "jieba_pyfast"
-version = "1.4.2"
+version = "3.11.0"
 description = "Tokenize Chinese characters"
 license = "MIT"
 authors = ["snapADDY GmbH <info@snapaddy.com>"]
