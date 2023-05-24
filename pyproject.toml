@@ -5,18 +5,21 @@ description = "Tokenize Chinese characters"
 license = "MIT"
 authors = ["snapADDY GmbH <info@snapaddy.com>"]
 readme = "README.md"
-build = "build.py"
 
 [tool.poetry.dependencies]
 python = "3.11.*"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 isort = "^5.9.2"
 black = "^23.3.0"
 auditwheel = "^5.1.2"
 pycln = "^2.1.1"
 pytest = "^7.1.2"
 cibuildwheel = "^2.9.0"
+
+[tool.poetry.build]
+generate-setup-file = true
+script = "build.py"
 
 [tool.isort]
 line_length = 88
