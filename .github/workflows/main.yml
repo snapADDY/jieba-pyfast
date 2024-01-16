@@ -28,4 +28,4 @@ jobs:
         run: cibuildwheel --output-dir dist
 
       - name: Deploy wheels
-        run: poetry publish
+        run: poetry config pypi-token.pypi ${{ secrets.POETRY_PYPI_TOKEN_PYPI }} && poetry publish 
