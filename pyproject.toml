@@ -1,13 +1,13 @@
 [tool.poetry]
 name = "jieba_pyfast"
-version = "3.12.0"
+version = "3.13.0"
 description = "Tokenize Chinese characters"
 license = "MIT"
 authors = ["snapADDY GmbH <info@snapaddy.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "3.12.*"
+python = "3.13.*"
 
 [tool.poetry.group.dev.dependencies]
 isort = "^5.9.2"
@@ -21,18 +21,8 @@ cibuildwheel = "^2.9.0"
 generate-setup-file = true
 script = "build.py"
 
-[tool.isort]
-line_length = 88
-use_parentheses = true
-include_trailing_comma = true
-multi_line_output = 3
-
-[tool.pycln]
-all = true
-exclude = "__init__.py"
-
 [tool.cibuildwheel]
-build = "cp312-*"
+build = "cp313-*"
 test-requires = "pytest"
 test-command = "pytest {project}/tests"
 
