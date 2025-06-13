@@ -16,7 +16,6 @@ auditwheel = "^5.1.2"
 pycln = "^2.1.1"
 pytest = "^7.1.2"
 cibuildwheel = "^2.9.0"
-setuptools = "^80.9.0"
 
 [tool.poetry.build]
 generate-setup-file = true
@@ -26,8 +25,7 @@ script = "build.py"
 build = "cp313-*"
 test-requires = "pytest"
 test-command = "pytest {project}/tests"
-before-build = "pip install setuptools build"
 
 [build-system]
-requires = ["poetry-core", "setuptools", "wheel"]
+requires = ["poetry-core", "setuptools"]
 build-backend = "poetry.core.masonry.api"
