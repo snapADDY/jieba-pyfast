@@ -26,7 +26,8 @@ script = "build.py"
 build = "cp313-*"
 test-requires = "pytest"
 test-command = "pytest {project}/tests"
+before-build = "pip install setuptools"
 
 [build-system]
-requires = ["poetry-core", "setuptools"]
+requires = ["poetry-core>=1.0.0", "setuptools>=80.9.0"]
 build-backend = "poetry.core.masonry.api"
