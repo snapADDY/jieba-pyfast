@@ -22,10 +22,10 @@ jobs:
           python-version: "3.12"
 
       - name: Install cibuildwheel
-        run: pip install cibuildwheel<3 poetry
+        run: pip install "cibuildwheel<3"
 
       - name: Build wheels
         run: cibuildwheel --output-dir dist
 
       - name: Deploy wheels
-        run: poetry config pypi-token.pypi ${{ secrets.POETRY_PYPI_TOKEN_PYPI }} && poetry publish 
+        run: pip install poetry && poetry config pypi-token.pypi ${{ secrets.POETRY_PYPI_TOKEN_PYPI }} && poetry publish 
