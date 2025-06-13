@@ -1,18 +1,26 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
+import importlib.resources
 
-try:
-    import pkg_resources
-
-    get_module_res = lambda *res: pkg_resources.resource_stream(
-        __name__, os.path.join(*res)
-    )
-except ImportError:
-    get_module_res = lambda *res: open(
-        os.path.normpath(os.path.join(os.getcwd(), os.path.dirname(__file__), *res)),
-        "rb",
-    )
+# Replace pkg_resources with importlib.resources
+def get_module_res(*res):
+    package = __name__.split('.')[0]  # Get the top-level package name
+    resource_path = os.path.join(*res)
+    try:
+        # For Python 3.9+
+        with importlib.resources.files(package).joinpath(resource_path).open('rb') as f:
+            return f
+    except (AttributeError, ImportError):
+        # Fallback for older Python versions
+        try:
+            return importlib.resources.open_binary(package, resource_path)
+        except (AttributeError, ImportError):
+            # Final fallback using file system
+            return open(
+                os.path.normpath(os.path.join(os.getcwd(), os.path.dirname(__file__), *res)),
+                "rb",
+            )
 
 
 default_encoding = sys.getfilesystemencoding()
