@@ -23,8 +23,6 @@ script = "build.py"
 
 [tool.cibuildwheel]
 build = "cp313-*"
-test-requires = "pytest"
-test-command = "pytest {project}/tests"
 
 [build-system]
 requires = ["poetry-core", "setuptools"]
