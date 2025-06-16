@@ -3,14 +3,12 @@ import os
 import sys
 import importlib.resources
 
-# Replace pkg_resources with importlib.resources
 def get_module_res(*res):
     package = __name__.split('.')[0]  # Get the top-level package name
     resource_path = os.path.join(*res)
     try:
         # For Python 3.9+
-        with importlib.resources.files(package).joinpath(resource_path).open('rb') as f:
-            return f
+        return importlib.resources.files(package).joinpath(resource_path).open('rb')
     except (AttributeError, ImportError):
         # Fallback for older Python versions
         try:
