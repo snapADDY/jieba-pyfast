@@ -1,6 +1,6 @@
 [project]
 name = "jieba_pyfast"
-version = "4.0.0a1"
+version = "4.0.0"
 description = "Tokenize Chinese characters"
 license = "MIT"
 authors = [{ name = "snapADDY GmbH", email = "info@snapaddy.com" }]
