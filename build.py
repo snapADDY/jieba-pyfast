@@ -1,10 +1,10 @@
-from setuptools import Extension
+from setuptools import Extension, setup
 
-
-def build(setup_kwargs: dict):
-    setup_kwargs["ext_modules"] = [
+setup(
+    ext_modules=[
         Extension(
             "_jieba_fast_functions_py3",
             sources=["jieba_pyfast/source/jieba_fast_functions_wrap_py3_wrap.c"],
         )
-    ]
+    ],
+)
