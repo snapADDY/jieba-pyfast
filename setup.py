@@ -8,6 +8,6 @@ setup(
         )
     ],
     package_data={
-        "jieba_pyfast": ["dict.txt"],
+        "jieba_pyfast": ["dict.txt", "py.typed"],
     },
 )

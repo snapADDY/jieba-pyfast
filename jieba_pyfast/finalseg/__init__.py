@@ -1,58 +1,28 @@
 import re
-import sys
+from collections.abc import Iterator
 
 import _jieba_fast_functions_py3 as _jieba_fast_functions
 
-from .._compat import get_module_res, strdecode
+from jieba_pyfast.finalseg.prob_emit import P as _emit_P
+from jieba_pyfast.finalseg.prob_start import P as _start_P
+from jieba_pyfast.finalseg.prob_trans import P as _trans_P
 
-MIN_FLOAT = -3.14e100
+_force_split_words: set[str] = set()
 
-PrevStatus = {"B": "ES", "M": "MB", "S": "SE", "E": "BM"}
-
-Force_Split_Words = set()
-
-from .prob_emit import P as emit_P
-from .prob_start import P as start_P
-from .prob_trans import P as trans_P
-"""
-start_P = _cxx_replace_start(start_P)
-trans_P = _cxx_replace_other(trans_P)
-emit_P = _cxx_replace_other(emit_P)
-"""
+_RE_HAN = re.compile(r"([\u4E00-\u9FD5]+)")
+_RE_SKIP = re.compile(r"([a-zA-Z0-9]+(?:\.\d+)?%?)")
 
 
-def viterbi(obs, states, start_p, trans_p, emit_p):
-    V = [{}]  # tabular
-    path = {}
-    for y in states:  # init
-        V[0][y] = start_p[y] + emit_p[y].get(obs[0], MIN_FLOAT)
-        path[y] = [y]
-    for t in range(1, len(obs)):
-        V.append({})
-        newpath = {}
-        for y in states:
-            em_p = emit_p[y].get(obs[t], MIN_FLOAT)
-            (prob, state) = max(
-                [
-                    (V[t - 1][y0] + trans_p[y0].get(y, MIN_FLOAT) + em_p, y0)
-                    for y0 in PrevStatus[y]
-                ]
-            )
-            V[t][y] = prob
-            newpath[y] = path[state] + [y]
-        path = newpath
-
-    (prob, state) = max((V[len(obs) - 1][y], y) for y in "ES")
-
-    return (prob, path[state])
+def add_force_split(word: str) -> None:
+    _force_split_words.add(word)
 
 
-def __cut(sentence):
-    global emit_P
-    prob, pos_list = _jieba_fast_functions._viterbi(
-        sentence, "BMES", start_P, trans_P, emit_P
+def _cut_block(sentence: str) -> Iterator[str]:
+    _, pos_list = _jieba_fast_functions._viterbi(
+        sentence, "BMES", _start_P, _trans_P, _emit_P
     )
-    begin, nexti = 0, 0
+    begin = 0
+    nexti = 0
     for i, char in enumerate(sentence):
         pos = pos_list[i]
         if pos == "B":
@@ -67,28 +37,15 @@ def __cut(sentence):
         yield sentence[nexti:]
 
 
-re_han = re.compile(r"([\u4E00-\u9FD5]+)")
-re_skip = re.compile(r"([a-zA-Z0-9]+(?:\.\d+)?%?)")
-
-
-def add_force_split(word):
-    global Force_Split_Words
-    Force_Split_Words.add(word)
-
-
-def cut(sentence):
-    sentence = strdecode(sentence)
-    blocks = re_han.split(sentence)
-    for blk in blocks:
-        if re_han.match(blk):
-            for word in __cut(blk):
-                if word not in Force_Split_Words:
+def cut(sentence: str) -> Iterator[str]:
+    for blk in _RE_HAN.split(sentence):
+        if _RE_HAN.match(blk):
+            for word in _cut_block(blk):
+                if word not in _force_split_words:
                     yield word
                 else:
-                    for c in word:
-                        yield c
+                    yield from word
         else:
-            tmp = re_skip.split(blk)
-            for x in tmp:
+            for x in _RE_SKIP.split(blk):
                 if x:
                     yield x

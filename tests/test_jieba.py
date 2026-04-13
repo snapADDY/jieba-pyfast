@@ -1,13 +1,10 @@
-#-*-coding: utf-8 -*-
-import sys
-sys.path.append("../")
-import unittest
-import types
+from collections.abc import Generator
+
+import pytest
+
 import jieba_pyfast as jieba
-from importlib import reload
 
-
-test_contents = [
+SENTENCES = [
     "这是一个伸手不见五指的黑夜。我叫孙悟空，我爱北京，我爱Python和C++。",
     "我不喜欢日本和服。",
     "雷猴回归人间。",
@@ -18,7 +15,7 @@ test_contents = [
     "abc",
     "隐马尔可夫",
     "雷猴是个好网站",
-    "“Microsoft”一词由“MICROcomputer（微型计算机）”和“SOFTware（软件）”两部分组成",
+    "\u201cMicrosoft\u201d一词由\u201cMICROcomputer（微型计算机）\u201d和\u201cSOFTware（软件）\u201d两部分组成",
     "草泥马和欺实马是今年的流行词汇",
     "伊藤洋华堂总府店",
     "中国科学院计算技术研究所",
@@ -54,7 +51,6 @@ test_contents = [
     "",
     "hello你好人们审美的观点是不同的",
     "很好但主要是基于网页形式",
-    "hello你好人们审美的观点是不同的",
     "为什么我不能拥有想要的生活",
     "后来我才",
     "此次来中国是为了",
@@ -64,9 +60,8 @@ test_contents = [
     "好人使用了它就可以解决一些问题",
     "是因为和国家",
     "老年搜索还支持",
-    "干脆就把那部蒙人的闲法给废了拉倒！RT @laoshipukong : 27日，全国人大常委会第三次审议侵权责任法草案，删除了有关医疗损害责任“举证倒置”的规定。在医患纠纷中本已处于弱势地位的消费者由此将陷入万劫不复的境地。 ",
+    "干脆就把那部蒙人的闲法给废了拉倒！RT @laoshipukong : 27日，全国人大常委会第三次审议侵权责任法草案，删除了有关医疗损害责任\u201c举证倒置\u201d的规定。在医患纠纷中本已处于弱势地位的消费者由此将陷入万劫不复的境地。 ",
     "大",
-    "",
     "他说的确实在理",
     "长春市长春节讲话",
     "结婚的和尚未结婚的",
@@ -80,43 +75,58 @@ test_contents = [
     "BP神经网络如何训练才能在分类时增加区分度？",
     "南京市长江大桥",
     "应一些使用者的建议，也为了便于利用NiuTrans用于SMT研究",
-    '长春市长春药店',
-    '邓颖超生前最喜欢的衣服',
-    '胡锦涛是热爱世界和平的政治局常委',
-    '程序员祝海林和朱会震是在孙健的左面和右面, 范凯在最右面.再往左是李松洪',
-    '一次性交多少钱',
-    '两块五一套，三块八一斤，四块七一本，五块六一条',
-    '小和尚留了一个像大和尚一样的和尚头',
-    '我是中华人民共和国公民;我爸爸是共和党党员; 地铁和平门站',
-    '张晓梅去人民医院做了个B超然后去买了件T恤',
-    'AT&T是一件不错的公司，给你发offer了吗？',
-    'C++和c#是什么关系？11+122=133，是吗？PI=3.14159',
-    '你认识那个和主席握手的的哥吗？他开一辆黑色的士。',
-    '枪杆子中出政权']
+    "长春市长春药店",
+    "邓颖超生前最喜欢的衣服",
+    "胡锦涛是热爱世界和平的政治局常委",
+    "程序员祝海林和朱会震是在孙健的左面和右面, 范凯在最右面.再往左是李松洪",
+    "一次性交多少钱",
+    "两块五一套，三块八一斤，四块七一本，五块六一条",
+    "小和尚留了一个像大和尚一样的和尚头",
+    "我是中华人民共和国公民;我爸爸是共和党党员; 地铁和平门站",
+    "张晓梅去人民医院做了个B超然后去买了件T恤",
+    "AT&T是一件不错的公司，给你发offer了吗？",
+    "C++和c#是什么关系？11+122=133，是吗？PI=3.14159",
+    "你认识那个和主席握手的的哥吗？他开一辆黑色的士。",
+    "枪杆子中出政权",
+]
 
 
-class JiebaTestCase(unittest.TestCase):
-    def setUp(self):
-        reload(jieba)
-
-    def testDefaultCut(self):
-        for content in test_contents:
-            result = jieba.cut(content)
-            assert isinstance(result, types.GeneratorType), "Test DefaultCut Generator error"
-            result = list(result)
-            assert isinstance(result, list), "Test DefaultCut error on content: %s" % content
-            print(" , ".join(result), file=sys.stderr)
-        print("testDefaultCut", file=sys.stderr)
-
-    def testDefaultCut_NOHMM(self):
-        for content in test_contents:
-            result = jieba.cut(content, HMM=False)
-            assert isinstance(result, types.GeneratorType), "Test DefaultCut Generator error"
-            result = list(result)
-            assert isinstance(result, list), "Test DefaultCut error on content: %s" % content
-            print(" , ".join(result), file=sys.stderr)
-        print("testDefaultCut_NOHMM", file=sys.stderr)
+@pytest.mark.parametrize("sentence", SENTENCES)
+def test_cut_returns_generator(sentence: str) -> None:
+    assert isinstance(jieba.cut(sentence), Generator)
 
 
-if __name__ == "__main__":
-    unittest.main()
+@pytest.mark.parametrize("sentence", SENTENCES)
+def test_cut_produces_strings(sentence: str) -> None:
+    words = list(jieba.cut(sentence))
+    assert all(isinstance(w, str) for w in words)
+
+
+@pytest.mark.parametrize("sentence", SENTENCES)
+def test_cut_no_hmm_produces_strings(sentence: str) -> None:
+    words = list(jieba.cut(sentence, HMM=False))
+    assert all(isinstance(w, str) for w in words)
+
+
+def test_cut_reconstructs_input() -> None:
+    sentence = "我爱北京天安门"
+    assert "".join(jieba.cut(sentence)) == sentence
+
+
+def test_cut_no_hmm_reconstructs_input() -> None:
+    sentence = "我爱北京天安门"
+    assert "".join(jieba.cut(sentence, HMM=False)) == sentence
+
+
+def test_cut_known_segmentation() -> None:
+    words = list(jieba.cut("我爱北京天安门"))
+    assert "北京" in words
+    assert "天安门" in words
+
+
+def test_cut_empty_string() -> None:
+    assert list(jieba.cut("")) == []
+
+
+def test_cut_ascii_only() -> None:
+    assert list(jieba.cut("abc")) == ["abc"]

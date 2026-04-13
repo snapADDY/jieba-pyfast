@@ -20,4 +20,4 @@ jobs:
         run: uv tool run cibuildwheel --output-dir dist
 
       - name: Publish wheels
-        run: uv publish --token ${{ secrets.PYPI_TOKEN }}
+        run: uv publish --token ${{ secrets.POETRY_PYPI_TOKEN_PYPI }}

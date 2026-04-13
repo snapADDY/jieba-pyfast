@@ -1,66 +1,55 @@
-__version__ = "3.14.0"
-__license__ = "MIT"
-
-import logging
+import importlib.resources
 import marshal
 import os
 import re
-import sys
 import tempfile
 import threading
-import time
+from collections.abc import Generator, Iterator
 from hashlib import md5
+from pathlib import Path
+from typing import IO, BinaryIO
 
 import _jieba_fast_functions_py3 as _jieba_fast_functions
 
-from . import finalseg
-from ._compat import get_module_res, resolve_filename, strdecode
+from jieba_pyfast import finalseg
 
-_get_abs_path = lambda path: os.path.normpath(os.path.join(os.getcwd(), path))
+_DEFAULT_DICT_NAME = "dict.txt"
 
-DEFAULT_DICT = None
-DEFAULT_DICT_NAME = "dict.txt"
+_RE_USERDICT = re.compile(r"^(.+?)( [0-9]+)?( [a-z]+)?$", re.U)
+_RE_ENG = re.compile(r"[a-zA-Z0-9]", re.U)
+_RE_HAN = re.compile(r"([\u4E00-\u9FD5a-zA-Z0-9+#&\._%]+)", re.U)
+_RE_SKIP = re.compile(r"(\r\n|\s)", re.U)
 
-log_console = logging.StreamHandler(sys.stderr)
-default_logger = logging.getLogger(__name__)
-default_logger.setLevel(logging.DEBUG)
-default_logger.addHandler(log_console)
+_dict_writing: dict[str | None, threading.RLock] = {}
 
-DICT_WRITING = {}
 
-re_userdict = re.compile(r"^(.+?)( [0-9]+)?( [a-z]+)?$", re.U)
-
-re_eng = re.compile(r"[a-zA-Z0-9]", re.U)
-
-re_han_default = re.compile(r"([\u4E00-\u9FD5a-zA-Z0-9+#&\._%]+)", re.U)
-re_skip_default = re.compile(r"(\r\n|\s)", re.U)
+def _get_module_res(name: str) -> BinaryIO:
+    return importlib.resources.files(__package__).joinpath(name).open("rb")  # type: ignore[return-value]
 
 
 class Tokenizer:
-    def __init__(self, dictionary=DEFAULT_DICT):
+    def __init__(self, dictionary: str | None = None) -> None:
         self.lock = threading.RLock()
-        if dictionary == DEFAULT_DICT:
-            self.dictionary = dictionary
-        else:
-            self.dictionary = _get_abs_path(dictionary)
-        self.FREQ = {}
-        self.total = 0
-        self.initialized = False
-        self.tmp_dir = None
-        self.cache_file = None
+        self.dictionary: str | None = (
+            str(Path(dictionary).resolve()) if dictionary else None
+        )
+        self.FREQ: dict[str, int] = {}
+        self.total: int = 0
+        self.initialized: bool = False
+        self.tmp_dir: str | None = None
+        self.cache_file: str | None = None
 
-    def __repr__(self):
-        return "<Tokenizer dictionary=%r>" % self.dictionary
+    def __repr__(self) -> str:
+        return f"<Tokenizer dictionary={self.dictionary!r}>"
 
-    def gen_pfdict(self, f):
-        lfreq = {}
+    def _gen_pfdict(self, f: BinaryIO) -> tuple[dict[str, int], int]:
+        lfreq: dict[str, int] = {}
         ltotal = 0
-        f_name = resolve_filename(f)
-        for lineno, line in enumerate(f, 1):
+        for lineno, raw in enumerate(f, 1):
             try:
-                line = line.strip().decode("utf-8")
-                word, freq = line.split(" ")[:2]
-                freq = int(freq)
+                line = raw.strip().decode("utf-8")
+                word, freq_s = line.split(" ")[:2]
+                freq = int(freq_s)
                 lfreq[word] = freq
                 ltotal += freq
                 for ch in range(len(word)):
@@ -69,100 +58,85 @@ class Tokenizer:
                         lfreq[wfrag] = 0
             except ValueError:
                 raise ValueError(
-                    "invalid dictionary entry in %s at Line %s: %s"
-                    % (f_name, lineno, line)
+                    f"invalid dictionary entry in {getattr(f, 'name', repr(f))} "
+                    f"at line {lineno}: {raw!r}"
                 )
         f.close()
         return lfreq, ltotal
 
-    def initialize(self, dictionary=None):
+    def _initialize(self, dictionary: str | None = None) -> None:
         if dictionary:
-            abs_path = _get_abs_path(dictionary)
+            abs_path = str(Path(dictionary).resolve())
             if self.dictionary == abs_path and self.initialized:
                 return
-            else:
-                self.dictionary = abs_path
-                self.initialized = False
+            self.dictionary = abs_path
+            self.initialized = False
         else:
             abs_path = self.dictionary
 
         with self.lock:
-            try:
-                with DICT_WRITING[abs_path]:
+            if abs_path in _dict_writing:
+                with _dict_writing[abs_path]:
                     pass
-            except KeyError:
-                pass
             if self.initialized:
                 return
 
-            default_logger.debug(
-                "Building prefix dict from %s ..."
-                % (abs_path or "the default dictionary")
-            )
-            t1 = time.time()
             if self.cache_file:
                 cache_file = self.cache_file
-            elif abs_path == DEFAULT_DICT:
+            elif abs_path is None:
                 cache_file = "jieba.cache"
             else:
-                cache_file = (
-                    "jieba.u%s.cache"
-                    % md5(abs_path.encode("utf-8", "replace")).hexdigest()
-                )
-            cache_file = os.path.join(self.tmp_dir or tempfile.gettempdir(), cache_file)
+                cache_file = "jieba.u%s.cache" % md5(
+                    abs_path.encode("utf-8", "replace")
+                ).hexdigest()
+
+            cache_file = os.path.join(
+                self.tmp_dir or tempfile.gettempdir(), cache_file
+            )
             tmpdir = os.path.dirname(cache_file)
 
-            load_from_cache_fail = True
+            loaded = False
             if os.path.isfile(cache_file) and (
-                abs_path == DEFAULT_DICT
+                abs_path is None
                 or os.path.getmtime(cache_file) > os.path.getmtime(abs_path)
             ):
-                default_logger.debug("Loading model from cache %s" % cache_file)
                 try:
                     with open(cache_file, "rb") as cf:
                         self.FREQ, self.total = marshal.load(cf)
-                    load_from_cache_fail = False
+                    loaded = True
                 except Exception:
-                    load_from_cache_fail = True
+                    loaded = False
 
-            if load_from_cache_fail:
-                wlock = DICT_WRITING.get(abs_path, threading.RLock())
-                DICT_WRITING[abs_path] = wlock
+            if not loaded:
+                wlock = _dict_writing.setdefault(abs_path, threading.RLock())
                 with wlock:
-                    self.FREQ, self.total = self.gen_pfdict(self.get_dict_file())
-                    default_logger.debug("Dumping model to file cache %s" % cache_file)
+                    self.FREQ, self.total = self._gen_pfdict(self._get_dict_file())
                     try:
                         fd, fpath = tempfile.mkstemp(dir=tmpdir)
                         with os.fdopen(fd, "wb") as temp_cache_file:
-                            marshal.dump((self.FREQ, self.total), temp_cache_file)
+                            marshal.dump(
+                                (self.FREQ, self.total), temp_cache_file
+                            )
                         os.rename(fpath, cache_file)
                     except Exception:
-                        default_logger.exception("Dump cache file failed.")
+                        print("Dump cache file failed.")
 
-                try:
-                    del DICT_WRITING[abs_path]
-                except KeyError:
-                    pass
+                _dict_writing.pop(abs_path, None)
 
             self.initialized = True
-            default_logger.debug(
-                "Loading model cost %.3f seconds." % (time.time() - t1)
-            )
-            default_logger.debug("Prefix dict has been built successfully.")
 
-    def check_initialized(self):
+    def _ensure_initialized(self) -> None:
         if not self.initialized:
-            self.initialize()
+            self._initialize()
 
-    def get_dict_file(self):
-        if self.dictionary == DEFAULT_DICT:
-            return get_module_res(DEFAULT_DICT_NAME)
-        else:
-            return open(self.dictionary, "rb")
+    def _get_dict_file(self) -> BinaryIO:
+        if self.dictionary is None:
+            return _get_module_res(_DEFAULT_DICT_NAME)
+        return open(self.dictionary, "rb")
 
-    def __cut_DAG_NO_HMM(self, sentence):
-        self.check_initialized()
-        route = []
+    def _cut_dag_no_hmm(self, sentence: str) -> Iterator[str]:
+        self._ensure_initialized()
+        route: list[int] = []
         _jieba_fast_functions._get_DAG_and_calc(
             self.FREQ, sentence, route, float(self.total)
         )
@@ -172,7 +146,7 @@ class Tokenizer:
         while x < N:
             y = route[x] + 1
             l_word = sentence[x:y]
-            if re_eng.match(l_word) and len(l_word) == 1:
+            if _RE_ENG.match(l_word) and len(l_word) == 1:
                 buf += l_word
                 x = y
             else:
@@ -184,9 +158,9 @@ class Tokenizer:
         if buf:
             yield buf
 
-    def __cut_DAG(self, sentence):
-        self.check_initialized()
-        route = []
+    def _cut_dag(self, sentence: str) -> Iterator[str]:
+        self._ensure_initialized()
+        route: list[int] = []
         _jieba_fast_functions._get_DAG_and_calc(
             self.FREQ, sentence, route, float(self.total)
         )
@@ -202,16 +176,11 @@ class Tokenizer:
                 if buf:
                     if len(buf) == 1:
                         yield buf
-                        buf = ""
+                    elif not self.FREQ.get(buf):
+                        yield from finalseg.cut(buf)
                     else:
-                        if not self.FREQ.get(buf):
-                            recognized = finalseg.cut(buf)
-                            for t in recognized:
-                                yield t
-                        else:
-                            for elem in buf:
-                                yield elem
-                        buf = ""
+                        yield from buf
+                    buf = ""
                 yield l_word
             x = y
 
@@ -219,106 +188,96 @@ class Tokenizer:
             if len(buf) == 1:
                 yield buf
             elif not self.FREQ.get(buf):
-                recognized = finalseg.cut(buf)
-                for t in recognized:
-                    yield t
+                yield from finalseg.cut(buf)
             else:
-                for elem in buf:
-                    yield elem
+                yield from buf
 
-    def cut(self, sentence, HMM=True):
+    def cut(self, sentence: str | bytes, *, HMM: bool = True) -> Generator[str]:
+        """Segment a sentence containing Chinese characters into words.
+
+        Args:
+            sentence: The string to be segmented.
+            HMM: Whether to use the Hidden Markov Model.
+
+        Yields:
+            Individual word segments.
         """
-        Segment a sentence containing Chinese characters into words.
+        if isinstance(sentence, bytes):
+            try:
+                sentence = sentence.decode("utf-8")
+            except UnicodeDecodeError:
+                sentence = sentence.decode("gbk", "ignore")
 
-        Parameter:
-            - sentence: The str to be segmented.
-            - HMM: Whether to use the Hidden Markov Model.
-        """
-        sentence = strdecode(sentence)
-
-        re_han = re_han_default
-        re_skip = re_skip_default
-        if HMM:
-            cut_block = self.__cut_DAG
-        else:
-            cut_block = self.__cut_DAG_NO_HMM
-        blocks = re_han.split(sentence)
-        for blk in blocks:
+        cut_block = self._cut_dag if HMM else self._cut_dag_no_hmm
+        for blk in _RE_HAN.split(sentence):
             if not blk:
                 continue
-            if re_han.match(blk):
-                for word in cut_block(blk):
-                    yield word
+            if _RE_HAN.match(blk):
+                yield from cut_block(blk)
             else:
-                tmp = re_skip.split(blk)
-                for x in tmp:
-                    if re_skip.match(x):
+                for x in _RE_SKIP.split(blk):
+                    if _RE_SKIP.match(x):
                         yield x
                     else:
-                        for xx in x:
-                            yield xx
+                        yield from x
 
-    def load_userdict(self, f):
+    def load_userdict(self, f: str | os.PathLike[str] | IO[bytes]) -> None:
+        """Load a user dictionary to improve segmentation.
+
+        Args:
+            f: Path to a UTF-8 dictionary file, or a binary file-like object.
+               Each line: ``word [freq [word_type]]``
         """
-        Load personalized dict to improve detect rate.
-
-        Parameter:
-            - f : A plain text file contains words and their occurrences.
-                  Can be a file-like object, or the path of the dictionary file,
-                  whose encoding must be utf-8.
-
-        Structure of dict file:
-        word1 freq1 word_type1
-        word2 freq2 word_type2
-        ...
-        Word type may be ignored
-        """
-        self.check_initialized()
-        if isinstance(f, str):
-            f_name = f
-            f = open(f, "rb")
+        self._ensure_initialized()
+        if isinstance(f, (str, os.PathLike)):
+            f_name = str(f)
+            f = open(f, "rb")  # noqa: SIM115
         else:
-            f_name = resolve_filename(f)
-        for lineno, ln in enumerate(f, 1):
-            line = ln.strip()
-            if not isinstance(line, str):
+            f_name = getattr(f, "name", repr(f))
+        for lineno, raw in enumerate(f, 1):
+            line = raw.strip()
+            if isinstance(line, bytes):
                 try:
                     line = line.decode("utf-8").lstrip("\ufeff")
                 except UnicodeDecodeError:
-                    raise ValueError("dictionary file %s must be utf-8" % f_name)
+                    raise ValueError(
+                        f"dictionary file {f_name} must be utf-8"
+                    ) from None
             if not line:
                 continue
-            word, freq, tag = re_userdict.match(line).groups()
-            if freq is not None:
-                freq = freq.strip()
-            self.add_word(word, freq)
+            m = _RE_USERDICT.match(line)
+            if not m:
+                continue
+            word, freq_s, _ = m.groups()
+            freq = freq_s.strip() if freq_s is not None else None
+            self._add_word(word, freq)
 
-    def add_word(self, word, freq=None):
-        self.check_initialized()
-        word = strdecode(word)
-        freq = int(freq) if freq is not None else self._suggest_freq(word)
-        self.FREQ[word] = freq
-        self.total += freq
+    def _add_word(self, word: str, freq: str | int | None = None) -> None:
+        self._ensure_initialized()
+        if isinstance(word, bytes):
+            word = word.decode("utf-8")
+        resolved_freq = int(freq) if freq is not None else self._suggest_freq(word)
+        self.FREQ[word] = resolved_freq
+        self.total += resolved_freq
         for ch in range(len(word)):
             wfrag = word[: ch + 1]
             if wfrag not in self.FREQ:
                 self.FREQ[wfrag] = 0
-        if freq == 0:
+        if resolved_freq == 0:
             finalseg.add_force_split(word)
 
-    def _suggest_freq(self, word):
-        self.check_initialized()
+    def _suggest_freq(self, word: str) -> int:
+        self._ensure_initialized()
         ftotal = float(self.total)
-        freq = 1
+        freq = 1.0
         for seg in self.cut(word, HMM=False):
             freq *= self.FREQ.get(seg, 1) / ftotal
-        freq = max(int(freq * self.total) + 1, self.FREQ.get(word, 1))
-        return freq
+        return max(int(freq * self.total) + 1, self.FREQ.get(word, 1))
 
 
 # default Tokenizer instance
-dt = Tokenizer()
+_dt = Tokenizer()
 
 # public API
-cut = dt.cut
-load_userdict = dt.load_userdict
+cut = _dt.cut
+load_userdict = _dt.load_userdict
