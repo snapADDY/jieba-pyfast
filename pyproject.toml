@@ -1,6 +1,6 @@
 [project]
 name = "jieba_pyfast"
-version = "4.0.0"
+version = "4.0.1"
 description = "Tokenize Chinese characters"
 license = "MIT"
 authors = [{ name = "snapADDY GmbH", email = "info@snapaddy.com" }]
@@ -11,7 +11,7 @@ requires-python = ">=3.11"
 dev = ["pytest>=8", "cibuildwheel>=2.22"]
 
 [tool.cibuildwheel]
-build = "cp311-* cp312-* cp313-* cp314-*"
+build = "cp311-* cp312-* cp313-* cp314-* cp315-*"
 before-build = "python -c \"import shutil; shutil.rmtree('build', ignore_errors=True)\""
 test-requires = "pytest"
 test-command = "pytest {project}/tests"
