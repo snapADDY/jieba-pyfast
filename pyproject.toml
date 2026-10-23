@@ -12,7 +12,7 @@ dev = ["pytest>=8", "cibuildwheel>=2.22"]
 
 [tool.cibuildwheel]
 build = "cp311-* cp312-* cp313-* cp314-*"
-before-build = "rm -rf build"
+before-build = "python -c \"import shutil; shutil.rmtree('build', ignore_errors=True)\""
 test-requires = "pytest"
 test-command = "pytest {project}/tests"
 

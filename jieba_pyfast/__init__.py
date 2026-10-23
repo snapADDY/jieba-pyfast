@@ -117,7 +117,7 @@ class Tokenizer:
                             marshal.dump(
                                 (self.FREQ, self.total), temp_cache_file
                             )
-                        os.rename(fpath, cache_file)
+                        os.replace(fpath, cache_file)
                     except Exception:
                         print("Dump cache file failed.")
 
